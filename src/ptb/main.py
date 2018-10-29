@@ -306,7 +306,7 @@ def train(mode="train"):
                 child_ops["test_reset"],
               ])
               print("Epoch {}: Training controller".format(epoch))
-              for ct_step in xrange(FLAGS.controller_train_steps *
+              for ct_step in range(FLAGS.controller_train_steps *
                                     FLAGS.controller_num_aggregate):
                 run_ops = [
                   controller_ops["loss"],
@@ -335,7 +335,7 @@ def train(mode="train"):
                   print(log_string)
 
               print("Here are 10 architectures")
-              for _ in xrange(10):
+              for _ in range(10):
                 arc, rw = sess.run([
                   controller_ops["sample_arc"],
                   controller_ops["reward"],
