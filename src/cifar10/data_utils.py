@@ -343,3 +343,4 @@ def read_data(data_path, dataset, num_valids=5000):
   #   images, labels = read_devanagari_data(data_path, num_valids)
   else:
     assert False, "Dataset not supported"
+    return images, labels
