@@ -37,6 +37,8 @@ class Model(object):
                data_format="NHWC",
                name="generic_model",
                seed=None,
+               in_channels=3,
+               num_classes=10,
               ):
     """
     Args:
@@ -62,6 +64,8 @@ class Model(object):
     self.data_format = data_format
     self.name = name
     self.seed = seed
+    self.in_channels = in_channels
+    self.num_classes = num_classes
     
     self.global_step = None
     self.valid_acc = None
@@ -85,18 +89,19 @@ class Model(object):
       self.lr_dec_every = lr_dec_every * self.num_train_batches
 
       def _pre_process(x):
+        hw = self._get_HW(x)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
-        x = tf.random_crop(x, [32, 32, 3], seed=self.seed)
+        x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
         if self.cutout_size is not None:
           mask = tf.ones([self.cutout_size, self.cutout_size], dtype=tf.int32)
-          start = tf.random_uniform([2], minval=0, maxval=32, dtype=tf.int32)
-          mask = tf.pad(mask, [[self.cutout_size + start[0], 32 - start[0]],
-                               [self.cutout_size + start[1], 32 - start[1]]])
-          mask = mask[self.cutout_size: self.cutout_size + 32,
-                      self.cutout_size: self.cutout_size + 32]
-          mask = tf.reshape(mask, [32, 32, 1])
-          mask = tf.tile(mask, [1, 1, 3])
+          start = tf.random_uniform([2], minval=0, maxval=hw, dtype=tf.int32)
+          mask = tf.pad(mask, [[self.cutout_size + start[0], hw - start[0]],
+                               [self.cutout_size + start[1], hw - start[1]]])
+          mask = mask[self.cutout_size: self.cutout_size + hw,
+                      self.cutout_size: self.cutout_size + hw]
+          mask = tf.reshape(mask, [hw, hw, 1])
+          mask = tf.tile(mask, [1, 1, self.in_channels])
           x = tf.where(tf.equal(mask, 0), x=x, y=tf.zeros_like(x))
         if self.data_format == "NCHW":
           x = tf.transpose(x, [2, 0, 1])
@@ -264,8 +269,9 @@ class Model(object):
       )
 
       def _pre_process(x):
+        hw = self._get_HW(x)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
-        x = tf.random_crop(x, [32, 32, 3], seed=self.seed)
+        x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
         if self.data_format == "NCHW":
           x = tf.transpose(x, [2, 0, 1])

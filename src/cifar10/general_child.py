@@ -53,6 +53,8 @@ class GeneralChild(Model):
                num_replicas=None,
                data_format="NHWC",
                name="child",
+               in_channels=3,
+               num_classes=10,
                *args,
                **kwargs
               ):
@@ -195,7 +197,7 @@ class GeneralChild(Model):
 
       out_filters = self.out_filters
       with tf.variable_scope("stem_conv"):
-        w = create_weight("w", [3, 3, 3, out_filters])
+        w = create_weight("w", [3, 3, self.in_channels, out_filters])
         x = tf.nn.conv2d(images, w, [1, 1, 1, 1], "SAME", data_format=self.data_format)
         x = batch_norm(x, is_training, data_format=self.data_format)
         layers.append(x)
@@ -238,7 +240,7 @@ class GeneralChild(Model):
           inp_c = x.get_shape()[1].value
         else:
           raise ValueError("Unknown data_format {0}".format(self.data_format))
-        w = create_weight("w", [inp_c, 10])
+        w = create_weight("w", [inp_c, self.num_classes])
         x = tf.matmul(x, w)
     return x
 
@@ -676,8 +678,9 @@ class GeneralChild(Model):
       )
 
       def _pre_process(x):
+        hw = self._get_HW(x)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
-        x = tf.random_crop(x, [32, 32, 3], seed=self.seed)
+        x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
         if self.data_format == "NCHW":
           x = tf.transpose(x, [2, 0, 1])
