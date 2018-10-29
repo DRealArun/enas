@@ -3,7 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import cPickle as pickle
+#import cPickle as pickle
+import pickle as pickle
 import shutil
 import sys
 import time
@@ -199,6 +200,8 @@ def get_ops(images, labels):
     "train_acc": child_model.train_acc,
     "optimizer": child_model.optimizer,
     "num_train_batches": child_model.num_train_batches,
+    "reduction_cell": child_model.reduce_arc,
+    "normal_cell":child_model.normal_arc,
   }
 
   ops = {
@@ -238,7 +241,8 @@ def train():
 
     print("-" * 80)
     print("Starting session")
-    config = tf.ConfigProto(allow_soft_placement=True)
+    #config = tf.ConfigProto(allow_soft_placement=True)
+    config = tf.ConfigProto(allow_soft_placement=True, gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.4))
     with tf.train.SingularMonitoredSession(
       config=config, hooks=hooks, checkpoint_dir=FLAGS.output_dir) as sess:
         start_time = time.time()
@@ -249,10 +253,12 @@ def train():
             child_ops["grad_norm"],
             child_ops["train_acc"],
             child_ops["train_op"],
+            child_ops["reduction_cell"],
+            child_ops["normal_cell"],
           ]
-          loss, lr, gn, tr_acc, _ = sess.run(run_ops)
+          loss, lr, gn, tr_acc, _, red_arc, nor_arc = sess.run(run_ops)
           global_step = sess.run(child_ops["global_step"])
-
+          print("Architectures",red_arc,nor_arc)
           if FLAGS.child_sync_replicas:
             actual_step = global_step * FLAGS.num_aggregate
           else:

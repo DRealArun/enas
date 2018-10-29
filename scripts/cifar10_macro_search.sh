@@ -8,13 +8,13 @@ python src/cifar10/main.py \
   --reset_output_dir \
   --data_path="data/cifar10" \
   --output_dir="outputs" \
-  --batch_size=128 \
+  --batch_size=32 \
   --num_epochs=310 \
   --log_every=50 \
   --eval_every_epochs=1 \
   --child_use_aux_heads \
-  --child_num_layers=12 \
-  --child_out_filters=36 \
+  --child_num_layers=6 \
+  --child_out_filters=15 \
   --child_l2_reg=0.00025 \
   --child_num_branches=6 \
   --child_num_cell_layers=5 \
