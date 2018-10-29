@@ -10,6 +10,7 @@ import os, sys, tarfile, urllib
 import scipy as sp
 import scipy.io as sio
 from scipy.misc import *
+import urllib.request
 
 
 def _read_data(data_path, train_files):
@@ -195,11 +196,11 @@ def download_and_extract(DATA_DIR):
     filename = DATA_URL.split('/')[-1]
     filepath = os.path.join(dest_directory, filename)
     if not os.path.exists(filepath):
-        def _progress(count, block_size, total_size):
-            sys.stdout.write('\rDownloading %s %.2f%%' % (filename,
-                float(count * block_size) / float(total_size) * 100.0))
-            sys.stdout.flush()
-        filepath, _ = urllib.urlretrieve(DATA_URL, filepath, reporthook=_progress)
+        # def _progress(count, block_size, total_size):
+        #     sys.stdout.write('\rDownloading %s %.2f%%' % (filename,
+        #         float(count * block_size) / float(total_size) * 100.0))
+        #     sys.stdout.flush()
+        filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath)
         print('Downloaded', filename)
         tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
