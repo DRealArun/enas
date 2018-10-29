@@ -32,9 +32,11 @@ FLAGS = flags.FLAGS
 
 DEFINE_boolean("reset_output_dir", False, "Delete output_dir if exists.")
 DEFINE_string("data_path", "", "")
+DEFINE_string("dataset", "cifar10", "Which dataset mnist/fashion/svhn/stl10/devanagari")
 DEFINE_string("output_dir", "", "")
 DEFINE_string("data_format", "NHWC", "'NHWC' or 'NCWH'")
 DEFINE_string("search_for", None, "Must be [macro|micro]")
+DEFINE_string("validation_size", 500, "Number of validation examples")
 
 DEFINE_integer("batch_size", 32, "")
 
@@ -91,6 +93,31 @@ DEFINE_boolean("controller_use_critic", False, "")
 DEFINE_integer("log_every", 50, "How many steps to log")
 DEFINE_integer("eval_every_epochs", 1, "How many epochs to eval")
 
+CIFAR_CLASSES = 10
+MNIST_CLASSES = 10
+FASHION_CLASSES = 10
+EMNIST_CLASSES = 47
+SVHN_CLASSES = 10
+STL10_CLASSES = 10
+DEVANAGARI_CLASSES = 46
+
+class_dict = {'cifar10': CIFAR_CLASSES,
+              'mnist' : MNIST_CLASSES,
+              'emnist': EMNIST_CLASSES,
+              'fashion': FASHION_CLASSES,
+              'svhn': SVHN_CLASSES,
+              'stl10': STL10_CLASSES,
+              'devanagari' : DEVANAGARI_CLASSES}
+
+inp_channel_dict = {'cifar10': 3,
+                    'mnist' : 1,
+                    'emnist': 1,
+                    'fashion': 1,
+                    'svhn': 3,
+                    'stl10': 3,
+                    'devanagari' : 1}
+
+
 def get_ops(images, labels):
   """
   Args:
@@ -99,6 +126,8 @@ def get_ops(images, labels):
   """
 
   assert FLAGS.search_for is not None, "Please specify --search_for"
+  number_of_classes = class_dict[FLAGS.dataset]
+  in_channels = inp_channel_dict[FLAGS.dataset]
 
   if FLAGS.search_for == "micro":
     ControllerClass = MicroController
@@ -139,6 +168,8 @@ def get_ops(images, labels):
     sync_replicas=FLAGS.child_sync_replicas,
     num_aggregate=FLAGS.child_num_aggregate,
     num_replicas=FLAGS.child_num_replicas,
+    in_channels=in_channels,
+    num_classes=number_of_classes,
   )
 
   if FLAGS.child_fixed_arc is None:
@@ -200,8 +231,6 @@ def get_ops(images, labels):
     "train_acc": child_model.train_acc,
     "optimizer": child_model.optimizer,
     "num_train_batches": child_model.num_train_batches,
-    "reduction_cell": child_model.reduce_arc,
-    "normal_cell":child_model.normal_arc,
   }
 
   ops = {
@@ -217,9 +246,9 @@ def get_ops(images, labels):
 
 def train():
   if FLAGS.child_fixed_arc is None:
-    images, labels = read_data(FLAGS.data_path)
+    images, labels = read_data(FLAGS.data_path, FLAGS.dataset, num_valids=FLAGS.validation_size)
   else:
-    images, labels = read_data(FLAGS.data_path, num_valids=0)
+    images, labels = read_data(FLAGS.data_path, FLAGS.dataset, num_valids=0)
 
   g = tf.Graph()
   with g.as_default():
@@ -253,12 +282,9 @@ def train():
             child_ops["grad_norm"],
             child_ops["train_acc"],
             child_ops["train_op"],
-            child_ops["reduction_cell"],
-            child_ops["normal_cell"],
           ]
-          loss, lr, gn, tr_acc, _, red_arc, nor_arc = sess.run(run_ops)
+          loss, lr, gn, tr_acc, _ = sess.run(run_ops)
           global_step = sess.run(child_ops["global_step"])
-          print("Architectures",red_arc,nor_arc)
           if FLAGS.child_sync_replicas:
             actual_step = global_step * FLAGS.num_aggregate
           else:

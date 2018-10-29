@@ -54,6 +54,8 @@ class MicroChild(Model):
                num_replicas=None,
                data_format="NHWC",
                name="child",
+               in_channels=3,
+               num_classes=10,
                **kwargs
               ):
     """
@@ -99,6 +101,8 @@ class MicroChild(Model):
     self.num_layers = num_layers
     self.num_cells = num_cells
     self.fixed_arc = fixed_arc
+    self.in_channels = in_channels
+    self.num_classes = num_classes
 
     self.global_step = tf.Variable(
       0, dtype=tf.int32, trainable=False, name="global_step")
@@ -246,7 +250,7 @@ class MicroChild(Model):
     with tf.variable_scope(self.name, reuse=reuse):
       # the first two inputs
       with tf.variable_scope("stem_conv"):
-        w = create_weight("w", [3, 3, 3, self.out_filters * 3])
+        w = create_weight("w", [3, 3, self.in_channels, self.out_filters * 3])
         x = tf.nn.conv2d(
           images, w, [1, 1, 1, 1], "SAME", data_format=self.data_format)
         x = batch_norm(x, is_training, data_format=self.data_format)
@@ -318,7 +322,7 @@ class MicroChild(Model):
               aux_logits = global_avg_pool(aux_logits,
                                            data_format=self.data_format)
               inp_c = aux_logits.get_shape()[1].value
-              w = create_weight("w", [inp_c, 10])
+              w = create_weight("w", [inp_c, self.num_classes])
               aux_logits = tf.matmul(aux_logits, w)
               self.aux_logits = aux_logits
 
@@ -334,7 +338,7 @@ class MicroChild(Model):
         x = tf.nn.dropout(x, self.keep_prob)
       with tf.variable_scope("fc"):
         inp_c = self._get_C(x)
-        w = create_weight("w", [inp_c, 10])
+        w = create_weight("w", [inp_c, self.num_classes])
         x = tf.matmul(x, w)
     return x
 
@@ -790,8 +794,9 @@ class MicroChild(Model):
       )
 
       def _pre_process(x):
+        hw = self._get_HW(x)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
-        x = tf.random_crop(x, [32, 32, 3], seed=self.seed)
+        x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
         if self.data_format == "NCHW":
           x = tf.transpose(x, [2, 0, 1])
