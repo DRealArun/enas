@@ -36,7 +36,7 @@ DEFINE_string("dataset", "cifar10", "Which dataset mnist/fashion/svhn/stl10/deva
 DEFINE_string("output_dir", "", "")
 DEFINE_string("data_format", "NHWC", "'NHWC' or 'NCWH'")
 DEFINE_string("search_for", None, "Must be [macro|micro]")
-DEFINE_string("validation_size", 500, "Number of validation examples")
+DEFINE_integer("validation_size", 500, "Number of validation examples")
 
 DEFINE_integer("batch_size", 32, "")
 
