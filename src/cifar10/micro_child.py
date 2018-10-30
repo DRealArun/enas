@@ -79,7 +79,9 @@ class MicroChild(Model):
       num_aggregate=num_aggregate,
       num_replicas=num_replicas,
       data_format=data_format,
-      name=name)
+      name=name,
+      in_channels=in_channels,
+      num_classes=num_classes)
 
     if self.data_format == "NHWC":
       self.actual_data_format = "channels_last"
@@ -103,6 +105,7 @@ class MicroChild(Model):
     self.fixed_arc = fixed_arc
     self.in_channels = in_channels
     self.num_classes = num_classes
+    self.dim = np.shape(images["train"])[2]
 
     self.global_step = tf.Variable(
       0, dtype=tf.int32, trainable=False, name="global_step")
@@ -215,7 +218,7 @@ class MicroChild(Model):
 
     hw = [self._get_HW(layer) for layer in layers]
     c = [self._get_C(layer) for layer in layers]
-
+    print("Layer Sizes:", hw)
     with tf.variable_scope("calibrate"):
       x = layers[0]
       if hw[0] != hw[1]:
@@ -246,7 +249,7 @@ class MicroChild(Model):
 
     if self.fixed_arc is None:
       is_training = True
-
+    print("In model",self._get_HW(images))
     with tf.variable_scope(self.name, reuse=reuse):
       # the first two inputs
       with tf.variable_scope("stem_conv"):
@@ -794,7 +797,7 @@ class MicroChild(Model):
       )
 
       def _pre_process(x):
-        hw = self._get_HW(x)
+        hw = self.dim
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
         x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)

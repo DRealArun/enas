@@ -89,7 +89,7 @@ def read_mnist_data(data_path, num_valids=8000):
     images, labels = {}, {}
     def _extract_fn(x):
         X = x.images
-        y = x.labels
+        y = np.array(x.labels, dtype=np.int32)
 
 #         if not normalize_range:
 #             X *= 255.0
@@ -176,7 +176,7 @@ def read_fashion_data(data_path, num_valids=5000):
 # https://github.com/ltoscano/STL10/blob/master/stl10_input.py
 def read_labels(path_to_labels):
     with open(path_to_labels, 'rb') as f:
-        labels = np.fromfile(f, dtype=np.uint8)
+        labels = np.fromfile(f, dtype=np.uint32)
         return labels
 
 
@@ -343,4 +343,4 @@ def read_data(data_path, dataset, num_valids=5000):
   #   images, labels = read_devanagari_data(data_path, num_valids)
   else:
     assert False, "Dataset not supported"
-    return images, labels
+  return images, labels
