@@ -271,7 +271,9 @@ def train():
     print("-" * 80)
     print("Starting session")
     #config = tf.ConfigProto(allow_soft_placement=True)
-    config = tf.ConfigProto(allow_soft_placement=True, gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5))
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    #config = tf.ConfigProto(allow_soft_placement=True, gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5))
     with tf.train.SingularMonitoredSession(
       config=config, hooks=hooks, checkpoint_dir=FLAGS.output_dir) as sess:
         start_time = time.time()
