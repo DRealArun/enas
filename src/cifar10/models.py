@@ -74,6 +74,7 @@ class Model(object):
     with tf.device("/cpu:0"):
       # training data
       self.num_train_examples = np.shape(images["train"])[0]
+      print("Dimensions are", np.shape(images["train"]),np.shape(labels["train"]))
       self.dim = np.shape(images["train"])[2]
       self.num_train_batches = (
         self.num_train_examples + self.batch_size - 1) // self.batch_size
