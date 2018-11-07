@@ -11,6 +11,11 @@ import scipy as sp
 import scipy.io as sio
 from scipy.misc import *
 import urllib.request
+import os
+import glob
+import pickle
+from PIL import Image
+import random
 
 
 def _read_data(data_path, train_files):
@@ -177,7 +182,7 @@ def read_fashion_data(data_path, num_valids=5000):
 def read_labels(path_to_labels):
     with open(path_to_labels, 'rb') as f:
         labels = np.fromfile(f, dtype=np.uint8)
-        labels = np.array(labels, dtype=np.int32)
+        labels = labels.astype(np.int32)
         return labels
 
 
@@ -248,6 +253,7 @@ def read_stl10_data(data_path, num_valids=500):
         images["valid"], labels["valid"] = None, None
 
     images["test"], labels["test"] = images_test.astype(np.float32) / 255.0, labels_test
+    print("Image Sizes After",images["train"].shape,images["valid"].shape,images["test"].shape)
     print("Max value before preprocessing",np.max(images["train"][0]))
     print ("Prepropcess: [subtract mean], [divide std]")
     mean = np.mean(images["train"], axis=(0, 1, 2), keepdims=True)
@@ -284,12 +290,11 @@ def read_svhn_data(data_path, num_valids = 10000):
             Y_train[i] = 0
 
     images["train"] = X_train
-    labels["train"] = np.squeeze(Y_train)
-    labels["train"] = np.array(labels["train"], dtype=np.int32)
+    labels["train"] = np.squeeze(Y_train).astype(np.int32)
 
-    train_path = os.path.join(data_path, 'test_32x32')
-    test_dict = sio.loadmat(train_path)
-    X = np.asarray(test_dict['X'], dtype=np.float32)
+    test_path = os.path.join(data_path, 'test_32x32')
+    test_dict = sio.loadmat(test_path)
+    X = np.asarray(test_dict['X'], dtype= np.float32)
 
     X_test = []
     for i in range(X.shape[3]):
@@ -302,8 +307,7 @@ def read_svhn_data(data_path, num_valids = 10000):
             Y_test[i] = 0
 
     images["test"] = X_test
-    labels["test"] = np.squeeze(Y_test)
-    labels["test"] = np.array(labels["test"], dtype=np.int32)
+    labels["test"] = np.squeeze(Y_test).astype(np.int32)
 
     if num_valids:
         images["valid"] = images["train"][-num_valids:]
@@ -314,6 +318,74 @@ def read_svhn_data(data_path, num_valids = 10000):
     else:
         images["valid"], labels["valid"] = None, None
 
+    print("Max value before preprocessing",np.max(images["train"][0]))
+    print ("Preprocess: [subtract mean], [divide std]")
+    mean = np.mean(images["train"], axis=(0, 1, 2), keepdims=True)
+    std = np.std(images["train"], axis=(0, 1, 2), keepdims=True)
+
+    print ("mean: {}".format(np.reshape(mean, [-1])))
+    print ("std: {}".format(np.reshape(std, [-1])))
+
+    images["train"] = (images["train"] - mean) / std
+    if num_valids:
+        images["valid"] = (images["valid"] - mean) / std
+    images["test"] = (images["test"] - mean) / std
+    print("Max value after preprocessing",np.max(images["train"][0]))
+    return images, labels
+
+def read_devanagari_data(dataset_name, data_directory, class_map, segments=1, directories_as_labels=True, files='**\*.png'):
+    # Create a dataset of file path and class tuples for each file
+    filenames = glob.glob(os.path.join(data_directory, files))
+    classes = (os.path.basename(os.path.dirname(name)) for name in filenames) if directories_as_labels else [None] * len(filenames)
+    dataset = list(zip(filenames, classes))
+    num_examples = len(filenames)
+    print("Number of examples",num_examples)
+    image_set = []
+    label_set = []
+    for index, sample in enumerate(dataset):
+        file_path, label = sample
+        image = Image.open(file_path)
+        image_raw = np.array(image)
+        image_raw = image_raw.reshape(32,32,1)
+        image_set.append(image_raw)
+        label_set.append(class_map[label])
+    image_set = np.asarray(image_set, dtype=np.float32)
+    label_set = np.asarray(label_set, dtype=np.int32)
+    print("Done", dataset_name)
+    return image_set, label_set
+
+
+def process_devanagari_directory(data_directory:str, num_valids=0):
+    images, labels = {}, {}
+    data_dir = os.path.expanduser(data_directory)
+    train_data_dir = os.path.join(data_dir, 'Train')
+    test_data_dir = os.path.join(data_dir, 'Test')
+
+    class_names = os.listdir(train_data_dir) # Get names of classes
+    class_name2id = { label: index for index, label in enumerate(class_names) } # Map class names to integer labels
+
+    # Persist this mapping so it can be loaded when training for decoding
+    with open(os.path.join(data_directory, 'class_name2id.p'), 'wb') as p:
+        pickle.dump(class_name2id, p, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    images["train"], labels["train"] = read_devanagari_data('train', train_data_dir, class_name2id)
+    combined = list(zip(images["train"], labels["train"]))
+    random.shuffle(combined)
+    images["train"], labels["train"] = zip(*combined)
+    images["train"] = np.asarray(images["train"], dtype=np.float32)
+    labels["train"] = np.asarray(labels["train"], dtype=np.int32)
+    if num_valids:
+        images["valid"] = images["train"][-num_valids:]
+        labels["valid"] = labels["train"][-num_valids:]
+
+        images["train"] = images["train"][:-num_valids]
+        labels["train"] = labels["train"][:-num_valids]
+        print(images["valid"].shape, labels["valid"].shape,images["valid"].dtype, labels["valid"].dtype)
+    else:
+        images["valid"], labels["valid"] = None, None
+    images["test"], labels["test"] = read_devanagari_data('test', test_data_dir, class_name2id)
+    print(images["train"].shape, labels["train"].shape,images["train"].dtype, labels["train"].dtype)
+    print(images["test"].shape, labels["test"].shape,images["test"].dtype, labels["valid"].dtype)
     print("Max value before preprocessing",np.max(images["train"][0]))
     print ("Preprocess: [subtract mean], [divide std]")
     mean = np.mean(images["train"], axis=(0, 1, 2), keepdims=True)
@@ -342,8 +414,8 @@ def read_data(data_path, dataset, num_valids=5000):
     images, labels = read_svhn_data(data_path, num_valids)
   elif dataset == 'stl10':
     images, labels = read_stl10_data(data_path, num_valids)
-  # elif dataset == 'devanagari':
-  #   images, labels = read_devanagari_data(data_path, num_valids)
+  elif dataset == 'devanagari':
+    images, labels = process_devanagari_directory(data_path, num_valids)
   else:
     assert False, "Dataset not supported"
   return images, labels
