@@ -89,7 +89,7 @@ def read_mnist_data(data_path, num_valids=8000):
     images, labels = {}, {}
     def _extract_fn(x):
         X = x.images
-        y = x.labels
+        y = np.array(x.labels, dtype=np.int32)
 
 #         if not normalize_range:
 #             X *= 255.0
@@ -134,7 +134,7 @@ def read_fashion_data(data_path, num_valids=5000):
     images, labels = {}, {}
     def _extract_fn(x):
         X = x.images
-        y = x.labels
+        y = np.array(x.labels, dtype=np.int32)
 
 #         if not normalize_range:
 #             X *= 255.0
@@ -177,6 +177,7 @@ def read_fashion_data(data_path, num_valids=5000):
 def read_labels(path_to_labels):
     with open(path_to_labels, 'rb') as f:
         labels = np.fromfile(f, dtype=np.uint8)
+        labels = np.array(labels, dtype=np.int32)
         return labels
 
 
@@ -270,7 +271,7 @@ def read_svhn_data(data_path, num_valids = 10000):
     images, labels = {}, {}
     train_path = os.path.join(data_path, 'train_32x32')
     train_dict = sio.loadmat(train_path)
-    X = np.asarray(train_dict['X'])
+    X = np.asarray(train_dict['X'], dtype=np.float32)
 
     X_train = []
     for i in range(X.shape[3]):
@@ -284,10 +285,11 @@ def read_svhn_data(data_path, num_valids = 10000):
 
     images["train"] = X_train
     labels["train"] = np.squeeze(Y_train)
+    labels["train"] = np.array(labels["train"], dtype=np.int32)
 
     train_path = os.path.join(data_path, 'test_32x32')
     test_dict = sio.loadmat(train_path)
-    X = np.asarray(test_dict['X'])
+    X = np.asarray(test_dict['X'], dtype=np.float32)
 
     X_test = []
     for i in range(X.shape[3]):
@@ -301,6 +303,7 @@ def read_svhn_data(data_path, num_valids = 10000):
 
     images["test"] = X_test
     labels["test"] = np.squeeze(Y_test)
+    labels["test"] = np.array(labels["test"], dtype=np.int32)
 
     if num_valids:
         images["valid"] = images["train"][-num_valids:]
@@ -343,4 +346,4 @@ def read_data(data_path, dataset, num_valids=5000):
   #   images, labels = read_devanagari_data(data_path, num_valids)
   else:
     assert False, "Dataset not supported"
-    return images, labels
+  return images, labels

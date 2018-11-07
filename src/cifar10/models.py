@@ -74,6 +74,8 @@ class Model(object):
     with tf.device("/cpu:0"):
       # training data
       self.num_train_examples = np.shape(images["train"])[0]
+      print("Dimensions are", np.shape(images["train"]),np.shape(labels["train"]))
+      self.dim = np.shape(images["train"])[2]
       self.num_train_batches = (
         self.num_train_examples + self.batch_size - 1) // self.batch_size
       x_train, y_train = tf.train.shuffle_batch(
@@ -89,7 +91,8 @@ class Model(object):
       self.lr_dec_every = lr_dec_every * self.num_train_batches
 
       def _pre_process(x):
-        hw = self._get_HW(x)
+        hw = self.dim
+        print("PREPROCESSING:",hw)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
         x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
@@ -269,7 +272,8 @@ class Model(object):
       )
 
       def _pre_process(x):
-        hw = self._get_HW(x)
+        hw = self.dim
+        print("PREPROCESSING:",hw)
         x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
         x = tf.random_crop(x, [hw, hw, self.in_channels], seed=self.seed)
         x = tf.image.random_flip_left_right(x, seed=self.seed)
